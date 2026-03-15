@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Workout">
+<meta name="theme-color" content="#ffffff">
+<title>Workout Tracker</title>
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #efefed;
+    --text: #1a1a1a; --text2: #6b6b6b; --text3: #9b9b9b;
+    --border: rgba(0,0,0,0.1);
+    --accent: #1D9E75; --accent-light: #E1F5EE; --accent-dark: #0F6E56;
+    --blue: #378ADD; --blue-light: #E6F1FB; --blue-dark: #0C447C; --blue-mid: #185FA5;
+    --purple-light: #EEEDFE; --purple-dark: #3C3489;
+    --coral-light: #FAECE7; --coral-dark: #712B13; --coral-mid: #993C1D;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --bg2: #2a2a2a; --bg3: #222222;
+      --text: #e8e8e8; --text2: #9b9b9b; --text3: #6b6b6b;
+      --border: rgba(255,255,255,0.1);
+      --accent-light: #08382a; --accent-dark: #5DCAA5;
+      --blue-light: #0a2a42; --blue-dark: #85B7EB; --blue-mid: #85B7EB;
+      --purple-light: #26215C; --purple-dark: #AFA9EC;
+      --coral-light: #3a1b0c; --coral-dark: #F0997B; --coral-mid: #F0997B;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg); color: var(--text);
+    max-width: 420px; margin: 0 auto;
+    padding: 20px 0 80px; min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  input, select, button { font-family: inherit; }
+  .page { padding: 0 16px; display: none; }
+  .page.active { display: block; }
+
+  /* Nav */
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: var(--bg); border-top: 0.5px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  .nav button {
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: var(--text3); font-size: 10px; font-weight: 500; padding: 4px 12px;
+    transition: color 0.15s;
+  }
+  .nav button.active { color: var(--accent); }
+  .nav button .icon { font-size: 18px; line-height: 1; }
+
+  /* Inputs */
+  .input {
+    width: 100%; padding: 8px 10px;
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    background: var(--bg); color: var(--text);
+    font-size: 14px; outline: none;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input-lg { font-size: 16px; font-weight: 500; }
+
+  /* Metric cards */
+  .metrics { display: grid; gap: 8px; margin-bottom: 24px; }
+  .metrics-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .metrics-2 { grid-template-columns: 1fr 1fr; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 12px; }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-value { font-size: 20px; font-weight: 500; margin-top: 4px; }
+  .metric-sm .metric-value { font-size: 22px; }
+
+  /* Cards */
+  .card {
+    margin-bottom: 16px; padding: 14px;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  /* Suggestions dropdown */
+  .suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: none;
+  }
+  .suggestions.open { display: block; }
+  .suggestion { padding: 10px 12px; cursor: pointer; font-size: 14px; border-bottom: 0.5px solid var(--border); }
+  .suggestion:active { background: var(--bg2); }
+
+  /* Details */
+  details { margin-bottom: 8px; border-radius: var(--radius-lg); border: 0.5px solid var(--border); overflow: hidden; }
+  summary { padding: 12px 14px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+  summary::-webkit-details-marker { display: none; }
+
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: var(--text2); margin: 0 0 16px; }
+  .section-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px; }
+
+  .empty { padding: 0 16px; text-align: center; margin-top: 60px; }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
+</style>
+</head>
+<body>
+
+<!-- LOG VIEW -->
+<div id="page-log" class="page active">
+  <h1>Log exercise</h1>
+  <div style="display:flex;align-items:center;gap:8px;margin:0 0 20px">
+    <div style="position:relative;display:inline-flex;align-items:center">
+      <span id="date-display" style="font-size:13px;color:var(--text2);cursor:pointer"></span>
+      <input type="date" id="log-date" style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer">
+    </div>
+    <button id="back-to-today" onclick="setLogDate(todayStr())" style="display:none;background:none;border:none;cursor:pointer;font-size:12px;color:var(--accent);font-weight:500">Back to today</button>
+  </div>
+
+  <div style="position:relative">
+    <input type="text" id="exercise-name" class="input input-lg" placeholder="Exercise name" autocomplete="off">
+    <div id="suggestions" class="suggestions"></div>
+  </div>
+
+  <div id="last-performance" style="display:none;margin:12px 0;padding:10px 12px;background:var(--blue-light);border-radius:var(--radius);font-size:13px"></div>
+
+  <div style="margin:16px 0 8px">
+    <div style="display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:8px;margin-bottom:6px">
+      <span></span>
+      <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Weight</span>
+      <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Reps</span>
+      <span></span>
+    </div>
+    <div id="sets-container"></div>
+  </div>
+
+  <button onclick="addSet()" style="width:100%;padding:10px;background:none;border:1px dashed var(--border);border-radius:var(--radius);color:var(--text2);font-size:13px;cursor:pointer;margin-bottom:16px">+ Add set</button>
+
+  <button id="save-btn" onclick="saveExercise()" style="width:100%;padding:14px;border:none;border-radius:var(--radius);cursor:pointer;background:var(--text);color:var(--bg);font-size:15px;font-weight:500;transition:all 0.2s">Save exercise</button>
+
+  <div id="today-exercises" style="margin-top:28px;display:none">
+    <p class="section-label" id="today-exercises-label">Today so far</p>
+    <div id="today-exercises-list"></div>
+  </div>
+</div>
+
+<!-- TODAY VIEW -->
+<div id="page-today" class="page">
+  <div id="today-content"></div>
+</div>
+
+<!-- HISTORY VIEW -->
+<div id="page-history" class="page">
+  <div id="history-content"></div>
+</div>
+
+<!-- TRENDS VIEW -->
+<div id="page-trends" class="page">
+  <div id="trends-content"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="active" onclick="switchTab('log')" data-tab="log"><span class="icon">+</span>Log</button>
+  <button onclick="switchTab('today')" data-tab="today"><span class="icon">◎</span>Today</button>
+  <button onclick="switchTab('history')" data-tab="history"><span class="icon">☰</span>History</button>
+  <button onclick="switchTab('trends')" data-tab="trends"><span class="icon">↗</span>Trends</button>
+</div>
+
+<script>
+// --- State ---
+let data = { workouts: {} };
+let currentTab = 'log';
+let logDate = todayStr();
+let sets = [{ weight: '', reps: '' }];
+
+// --- Storage ---
+function loadData() {
+  try {
+    const raw = localStorage.getItem('workouts-data');
+    return raw ? JSON.parse(raw) : { workouts: {} };
+  } catch { return { workouts: {} }; }
+}
+function saveData() {
+  try { localStorage.setItem('workouts-data', JSON.stringify(data)); }
+  catch(e) { console.error('Save failed:', e); }
+}
+
+// --- Helpers ---
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function formatDate(s) {
+  return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function getWeekday(s) {
+  return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
+}
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+// --- Nav ---
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  if (tab === 'today') renderToday();
+  if (tab === 'history') renderHistory();
+  if (tab === 'trends') renderTrends();
+}
+
+// --- Log View ---
+function setLogDate(d) {
+  logDate = d;
+  document.getElementById('log-date').value = d;
+  updateDateDisplay();
+  renderSetsUI();
+  updateLastPerformance();
+  renderTodayExercises();
+}
+
+function updateDateDisplay() {
+  const display = document.getElementById('date-display');
+  const isBack = logDate !== todayStr();
+  display.textContent = formatDate(logDate) + ' ▾';
+  display.style.color = isBack ? 'var(--blue-dark)' : 'var(--text2)';
+  display.style.background = isBack ? 'var(--blue-light)' : 'none';
+  display.style.padding = isBack ? '4px 10px' : '0';
+  display.style.borderRadius = 'var(--radius)';
+  display.style.fontWeight = isBack ? '500' : '400';
+  document.getElementById('back-to-today').style.display = isBack ? 'inline' : 'none';
+}
+
+function renderSetsUI() {
+  const container = document.getElementById('sets-container');
+  container.innerHTML = '';
+  sets.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:8px;align-items:center;margin-bottom:6px';
+    row.innerHTML = `
+      <span style="font-size:12px;color:var(--text3);text-align:center">${i+1}</span>
+      <input type="number" inputmode="decimal" placeholder="lbs" value="${s.weight}" class="input" data-idx="${i}" data-field="weight">
+      <input type="number" inputmode="numeric" placeholder="reps" value="${s.reps}" class="input" data-idx="${i}" data-field="reps">
+      <button onclick="removeSet(${i})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0">×</button>
+    `;
+    row.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', e => {
+        sets[+e.target.dataset.idx][e.target.dataset.field] = e.target.value;
+      });
+    });
+    container.appendChild(row);
+  });
+}
+
+function addSet() { sets.push({ weight: '', reps: '' }); renderSetsUI(); }
+function removeSet(i) { if (sets.length > 1) { sets.splice(i, 1); renderSetsUI(); } }
+
+function getAllExerciseNames() {
+  const names = new Set();
+  Object.values(data.workouts).forEach(day => day.forEach(ex => names.add(ex.name)));
+  return [...names].sort();
+}
+
+function updateLastPerformance() {
+  const name = document.getElementById('exercise-name').value.trim().toLowerCase();
+  const el = document.getElementById('last-performance');
+  if (!name) { el.style.display = 'none'; return; }
+  let best = null;
+  Object.entries(data.workouts).forEach(([date, exs]) => {
+    exs.forEach(ex => {
+      if (ex.name.toLowerCase() === name && date !== logDate) {
+        if (!best || date > best.date) best = { date, sets: ex.sets };
+      }
+    });
+  });
+  if (best) {
+    const setsStr = best.sets.map(s => `${s.weight}lbs × ${s.reps}`).join(', ');
+    el.innerHTML = `<span style="color:var(--blue-dark);font-weight:500">Last time</span> <span style="color:var(--blue-mid)">(${formatDate(best.date)}): ${setsStr}</span>`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// Suggestions
+const nameInput = document.getElementById('exercise-name');
+const sugBox = document.getElementById('suggestions');
+nameInput.addEventListener('input', () => {
+  updateLastPerformance();
+  showSuggestions();
+});
+nameInput.addEventListener('focus', showSuggestions);
+nameInput.addEventListener('blur', () => setTimeout(() => sugBox.classList.remove('open'), 150));
+
+function showSuggestions() {
+  const val = nameInput.value.toLowerCase();
+  if (!val) { sugBox.classList.remove('open'); return; }
+  const all = getAllExerciseNames();
+  const filtered = all.filter(n => n.toLowerCase().includes(val) && n.toLowerCase() !== val).slice(0, 5);
+  if (filtered.length === 0) { sugBox.classList.remove('open'); return; }
+  sugBox.innerHTML = filtered.map(n => `<div class="suggestion" onmousedown="pickSuggestion('${n.replace(/'/g,"\\'")}')">${n}</div>`).join('');
+  sugBox.classList.add('open');
+}
+function pickSuggestion(name) {
+  nameInput.value = name;
+  sugBox.classList.remove('open');
+  updateLastPerformance();
+}
+
+function saveExercise() {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  const validSets = sets.filter(s => s.reps).map(s => ({
+    weight: parseFloat(s.weight) || 0,
+    reps: parseInt(s.reps) || 0,
+  }));
+  if (validSets.length === 0) return;
+
+  if (!data.workouts[logDate]) data.workouts[logDate] = [];
+  data.workouts[logDate].push({ id: genId(), name, sets: validSets });
+  saveData();
+
+  const btn = document.getElementById('save-btn');
+  btn.textContent = 'Saved ✓';
+  btn.style.background = 'var(--accent)';
+  btn.style.color = '#fff';
+  setTimeout(() => { btn.textContent = 'Save exercise'; btn.style.background = 'var(--text)'; btn.style.color = 'var(--bg)'; }, 1500);
+
+  nameInput.value = '';
+  sets = [{ weight: '', reps: '' }];
+  renderSetsUI();
+  renderTodayExercises();
+  document.getElementById('last-performance').style.display = 'none';
+}
+
+function renderTodayExercises() {
+  const exs = data.workouts[logDate] || [];
+  const container = document.getElementById('today-exercises');
+  const list = document.getElementById('today-exercises-list');
+  const label = document.getElementById('today-exercises-label');
+  if (exs.length === 0) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  label.textContent = logDate !== todayStr() ? formatDate(logDate) : 'Today so far';
+  list.innerHTML = exs.map(ex => `
+    <div style="padding:10px 0;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:14px;font-weight:500">${ex.name}</span>
+      <span style="font-size:12px;color:var(--text2)">${ex.sets.length} set${ex.sets.length!==1?'s':''}</span>
+    </div>
+  `).join('');
+}
+
+// --- Today View ---
+function renderToday() {
+  const today = todayStr();
+  const exs = data.workouts[today] || [];
+  const el = document.getElementById('today-content');
+
+  if (exs.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">◎</div><p style="font-size:16px;color:var(--text2)">No exercises logged today</p><p style="font-size:13px;color:var(--text3)">Head to the log tab to get started</p></div>`;
+    return;
+  }
+
+  const totalSets = exs.reduce((a,e) => a+e.sets.length, 0);
+  const totalVol = exs.reduce((a,e) => a+e.sets.reduce((b,s) => b+s.weight*s.reps, 0), 0);
+  const volStr = totalVol >= 1000 ? `${Math.round(totalVol/100)/10}k` : Math.round(totalVol)+' lbs';
+
+  el.innerHTML = `
+    <h1>Today's workout</h1>
+    <p class="subtitle">${formatDate(today)}</p>
+    <div class="metrics metrics-3">
+      <div class="metric"><div class="metric-label">Exercises</div><div class="metric-value">${exs.length}</div></div>
+      <div class="metric"><div class="metric-label">Total sets</div><div class="metric-value">${totalSets}</div></div>
+      <div class="metric"><div class="metric-label">Volume</div><div class="metric-value">${volStr}</div></div>
+    </div>
+    ${exs.map(ex => `
+      <div class="card">
+        <div style="font-size:15px;font-weight:500;margin-bottom:10px">${ex.name}</div>
+        <div style="display:grid;grid-template-columns:40px 1fr 1fr;gap:4px">
+          <span style="font-size:11px;color:var(--text3)">Set</span>
+          <span style="font-size:11px;color:var(--text3)">Weight</span>
+          <span style="font-size:11px;color:var(--text3)">Reps</span>
+          ${ex.sets.map((s,i) => `
+            <span style="font-size:13px;color:var(--text2)">${i+1}</span>
+            <span style="font-size:13px">${s.weight} lbs</span>
+            <span style="font-size:13px">${s.reps}</span>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// --- History View ---
+function renderHistory() {
+  const dates = Object.keys(data.workouts).sort((a,b) => b.localeCompare(a));
+  const el = document.getElementById('history-content');
+
+  if (dates.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">☰</div><p style="font-size:16px;color:var(--text2)">No workout history yet</p></div>`;
+    return;
+  }
+
+  el.innerHTML = `<h1 style="margin-bottom:16px">History</h1>` + dates.map(date => {
+    const exs = data.workouts[date];
+    const vol = exs.reduce((a,e) => a+e.sets.reduce((b,s) => b+s.weight*s.reps, 0), 0);
+    const volStr = vol >= 1000 ? `${Math.round(vol/100)/10}k lbs` : `${Math.round(vol)} lbs`;
+    return `
+      <details>
+        <summary>
+          <div><span style="font-weight:500">${formatDate(date)}</span><span style="color:var(--text3);margin-left:8px;font-size:12px">${exs.length} exercise${exs.length!==1?'s':''}</span></div>
+          <span style="font-size:12px;color:var(--text2)">${volStr}</span>
+        </summary>
+        <div style="padding:0 14px 14px">
+          ${exs.map(ex => `
+            <div style="margin-bottom:10px">
+              <div style="font-size:13px;font-weight:500;margin-bottom:4px;color:var(--accent)">${ex.name}</div>
+              ${ex.sets.map((s,i) => `<div style="font-size:12px;color:var(--text2);padding-left:8px">Set ${i+1}: ${s.weight} lbs × ${s.reps} reps</div>`).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </details>
+    `;
+  }).join('');
+}
+
+// --- Trends View ---
+function renderTrends() {
+  const el = document.getElementById('trends-content');
+  const exerciseMap = {};
+
+  Object.entries(data.workouts).forEach(([date, exs]) => {
+    exs.forEach(ex => {
+      if (!exerciseMap[ex.name]) exerciseMap[ex.name] = [];
+      const maxW = Math.max(...ex.sets.map(s => s.weight));
+      const vol = ex.sets.reduce((a,s) => a+s.weight*s.reps, 0);
+      exerciseMap[ex.name].push({ date, maxWeight: maxW, totalVol: vol, sets: ex.sets });
+    });
+  });
+  Object.keys(exerciseMap).forEach(k => exerciseMap[k].sort((a,b) => a.date.localeCompare(b.date)));
+
+  const names = Object.keys(exerciseMap).sort();
+  if (names.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">↗</div><p style="font-size:16px;color:var(--text2)">No data yet</p><p style="font-size:13px;color:var(--text3)">Log some workouts to see trends</p></div>`;
+    return;
+  }
+
+  const currentSel = el.querySelector('#trend-select')?.value;
+  const selected = names.includes(currentSel) ? currentSel : names[0];
+  const entries = exerciseMap[selected];
+  const latest = entries[entries.length - 1];
+  const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+  const allTimeMax = Math.max(...entries.map(e => e.maxWeight));
+  const delta = prev ? latest.maxWeight - prev.maxWeight : 0;
+
+  let chartHTML = '';
+  if (entries.length > 1) {
+    const W = 340, H = 140;
+    const PAD = { t: 10, r: 10, b: 24, l: 36 };
+    const cW = W-PAD.l-PAD.r, cH = H-PAD.t-PAD.b;
+    const weights = entries.map(e => e.maxWeight);
+    const minV = Math.min(...weights)*0.9, maxV = Math.max(...weights)*1.05;
+    const range = maxV - minV || 1;
+    const pts = entries.map((e,i) => ({
+      x: PAD.l + (entries.length===1 ? cW/2 : (i/(entries.length-1))*cW),
+      y: PAD.t + cH - ((e.maxWeight-minV)/range)*cH,
+      ...e
+    }));
+    const pathD = pts.map((p,i) => `${i===0?'M':'L'} ${Math.round(p.x)} ${Math.round(p.y)}`).join(' ');
+
+    const gridLines = [0, 0.5, 1].map(pct => {
+      const val = Math.round(minV + range*pct);
+      const y = PAD.t + cH - pct*cH;
+      return `<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/><text x="${PAD.l-4}" y="${y+3}" text-anchor="end" font-size="10" fill="var(--text3)">${val}</text>`;
+    }).join('');
+
+    const showPts = pts.filter((_,i) => entries.length<=8 || i%Math.ceil(entries.length/6)===0 || i===entries.length-1);
+    const xLabels = showPts.map(p => `<text x="${p.x}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--text3)">${getWeekday(p.date)} ${new Date(p.date+'T12:00:00').getDate()}</text>`).join('');
+    const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--accent)" stroke="var(--bg)" stroke-width="1.5"/>`).join('');
+
+    chartHTML = `
+      <p class="section-label">Weight progression</p>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-bottom:24px">
+        ${gridLines}
+        <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots}${xLabels}
+      </svg>
+    `;
+  }
+
+  const sessionLog = [...entries].reverse().map(entry => `
+    <div style="padding:10px 0;border-bottom:0.5px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:500">${formatDate(entry.date)}</span>
+        <span style="font-size:12px;color:var(--accent)">${Math.round(entry.totalVol)} lbs vol</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2)">${entry.sets.map(s => `${s.weight}×${s.reps}`).join('  ·  ')}</div>
+    </div>
+  `).join('');
+
+  el.innerHTML = `
+    <h1 style="margin-bottom:16px">Trends</h1>
+    <select id="trend-select" class="input" style="width:100%;font-size:15px;font-weight:500;margin-bottom:16px;appearance:auto" onchange="renderTrends()">
+      ${names.map(n => `<option value="${n}" ${n===selected?'selected':''}>${n}</option>`).join('')}
+    </select>
+    <div class="metrics metrics-2">
+      <div class="metric metric-sm" style="background:var(--accent-light)"><div class="metric-label" style="color:var(--accent-dark)">Best weight</div><div class="metric-value" style="color:var(--accent-dark)">${allTimeMax} lbs</div></div>
+      <div class="metric metric-sm" style="background:var(--purple-light)"><div class="metric-label" style="color:var(--purple-dark)">Sessions</div><div class="metric-value" style="color:var(--purple-dark)">${entries.length}</div></div>
+      <div class="metric metric-sm" style="background:var(--blue-light)"><div class="metric-label" style="color:var(--blue-dark)">Last weight</div><div class="metric-value" style="color:var(--blue-dark)">${latest.maxWeight} lbs</div></div>
+      <div class="metric metric-sm" style="background:${delta>=0?'var(--accent-light)':'var(--coral-light)'}"><div class="metric-label" style="color:${delta>=0?'var(--accent-dark)':'var(--coral-dark)'}">vs previous</div><div class="metric-value" style="color:${delta>=0?'var(--accent-dark)':'var(--coral-mid)'}">${prev ? (delta>=0?'+':'')+delta+' lbs' : '—'}</div></div>
+    </div>
+    ${chartHTML}
+    <p class="section-label">Session log</p>
+    ${sessionLog}
+  `;
+}
+
+// --- Init ---
+data = loadData();
+document.getElementById('log-date').value = logDate;
+document.getElementById('log-date').max = todayStr();
+document.getElementById('log-date').addEventListener('change', e => setLogDate(e.target.value));
+document.getElementById('date-display').addEventListener('click', () => {
+  const dp = document.getElementById('log-date');
+  if (dp.showPicker) dp.showPicker(); else dp.focus();
+});
+updateDateDisplay();
+renderSetsUI();
+renderTodayExercises();
+</script>
+</body>
+</html>
